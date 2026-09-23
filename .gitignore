@@ -1,0 +1,20 @@
+# The script creates timestamped backups next to the game files.
+*.orig-backup-*
+*.backup-*
+
+# Python
+__pycache__/
+*.pyc
+
+# Session logs
+*.log
+
+# Exports kept locally for audio tools; not versioned in this repository.
+/languages_fr.txt
+
+# Review tools and data kept locally.
+/translation_review*
+/tests/test_translation_review_status.py
+*.bak-*
+*.bak
+/BACKUP/
