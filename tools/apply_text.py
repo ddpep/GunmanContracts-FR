@@ -9,7 +9,7 @@ import sys
 
 DATA = r"C:/Program Files (x86)/Steam/steamapps/common/Gunman Contracts - Stand Alone/GunmanContracts_Data"
 HERE = os.path.dirname(os.path.abspath(__file__))
-STRINGS = os.path.join(HERE, "fr_strings.json")
+STRINGS = os.path.join(HERE, "..", "data", "fr_strings.json")
 
 DE_SLOT = 2
 FR_SLOT = 3

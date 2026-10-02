@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Add or update subtitles whose clip names are absent from the original text table.
 
-    python add_out_of_table_lines.py --dry-run
-    python add_out_of_table_lines.py --apply
+    python tools/add_out_of_table_lines.py --dry-run
+    python tools/add_out_of_table_lines.py --apply
 
-Read translations from `fr_strings_out_of_table.json`, keyed by exact clip names.
+Read translations from `data/fr_strings_out_of_table.json`, keyed by exact clip names.
 Write French into DE and FR; leave EN empty because no source text is provided.
 Update existing rows in place and append missing rows without shifting existing indices.
 """
@@ -17,7 +17,7 @@ import sys
 
 DATA = r"C:/Program Files (x86)/Steam/steamapps/common/Gunman Contracts - Stand Alone/GunmanContracts_Data"
 HERE = os.path.dirname(os.path.abspath(__file__))
-OUT_OF_TABLE = os.path.join(HERE, "fr_strings_out_of_table.json")
+OUT_OF_TABLE = os.path.join(HERE, "..", "data", "fr_strings_out_of_table.json")
 DE_SLOT = 2
 FR_SLOT = 3
 FIELDS = 11

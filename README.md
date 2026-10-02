@@ -1,126 +1,175 @@
 # Gunman Contracts — Stand Alone: French translation
 
-French text and subtitles for Gunman Contracts — Stand Alone. Voice acting remains in English.
+French text and subtitles for Gunman Contracts — Stand Alone, plus a **Français**
+entry in the game's language menu. Voice acting remains in English.
 
 Unofficial fan translation, not affiliated with the game's creators. Game assets
 are not distributed here and remain the property of their respective rights holders.
 
 [Français ci-dessous](#français)
 
-## Install or update
+## Install
 
-On the PC where the game is installed, close the game and run these commands
-from this repository's root directory:
+Close the game, then from this repository's root directory:
 
 ```bash
 python -m pip install -r requirements.txt
-python apply_text.py --overwrite-de
-python add_out_of_table_lines.py --apply
-python apply_scene_hints.py --apply
+python install.py
 ```
 
-Three steps, in this order. `apply_text.py` writes the main table.
-`add_out_of_table_lines.py` then appends the rows the dubbing needs but the table
-does not carry, so those subtitles exist at all. `apply_scene_hints.py` finally
-translates the interaction hints the game reads from its **scenes** rather than
-from the table. Running only the first step leaves both gaps in place. Each of
-the last two also accepts `--dry-run`, which reports without writing.
+`install.py` runs, in order: `tools/apply_text.py` (writes the main text table),
+`tools/add_out_of_table_lines.py` (adds the subtitles the table has no row for),
+`tools/apply_scene_hints.py` (translates the interaction hints baked into the
+scenes), then the menu patch (below) so **Français** is selectable in the game.
 
-The current game version offers **English** and **Deutsch**, but no selectable
-French language. The command above writes French to both the FR and DE entries;
-select **Options → Language → Deutsch** in the game to display the translation.
-This replaces German text.
+Options: `--dry-run` (report only), `--no-menu` (texts only), `--overwrite-de`
+(the fallback below), `--restore` (undo the menu patch), and a custom install
+path: `python install.py "D:/Games/Gunman Contracts - Stand Alone"` (the game
+folder, or its `GunmanContracts_Data` subfolder). The Steam library path is the
+default.
 
-By default, the script looks for `resources.assets` in:
+## The language menu
 
-`C:/Program Files (x86)/Steam/steamapps/common/Gunman Contracts - Stand Alone/GunmanContracts_Data`
+The stock game only offers **English** and **Deutsch**. The install adds
+**Français** as a third entry through the loaderless patch (`tools/apply_french_patch.py`):
+three byte edits in existing game files, no mod loader, nothing running
+alongside the game — the game's mod detector stays silent and Steam highscores
+keep working. Apply or undo it on its own with `tools/install_patch.bat` /
+`tools/restore_patch.bat`.
 
-For another installation, pass the path to **GunmanContracts_Data** (not the
-`resources.assets` file):
+**Fallback, without touching game binaries**: `python install.py --overwrite-de`
+writes French over the Deutsch entry as well; select **Options → Language →
+Deutsch** to display the translation. This replaces the German text.
 
-```bash
-python apply_text.py --overwrite-de "C:\path\to\GunmanContracts_Data"
-python add_out_of_table_lines.py --apply "C:\path\to\GunmanContracts_Data"
-python apply_scene_hints.py --apply "C:\path\to\GunmanContracts_Data"
-```
+If you used an earlier version of these scripts (French displayed through
+Deutsch): run Steam's "verify integrity" to restore the original files, run
+`python install.py` again — Français becomes selectable and the German text
+comes back.
 
-To update an already patched game, run the same command again. The script reads
-translations from `fr_strings.json` and replaces existing FR values. DE is
-changed **only** with `--overwrite-de`; keep the flag when updating a game that
-displays French through Deutsch. Without it, earlier French text in DE is not
-updated. A game update or Steam file verification may restore the original
-asset, in which case you can run the command again.
+## Updating
 
-Before writing, the script creates a timestamped
-`resources.assets.orig-backup-<date>` file next to `resources.assets`. Each backup
-contains the asset as it was **before that run**; later backups may therefore
-contain an already patched asset. To restore, close the game and replace
-`resources.assets` with the backup from the desired run. The script checks the
-asset size and refuses to write if the output is unexpectedly small. On Windows
-it also refuses to run if `GunmanContracts.exe` is detected; if the check cannot
-run, it warns you to verify manually that the game is closed.
+Run `python install.py` again after a game update or a Steam file verification
+(both restore the original files). The translation text lives in
+`data/fr_strings.json`; `--overwrite-de` is only for the fallback path.
+
+## Backup and restore
+
+Before writing, `tools/apply_text.py` creates a timestamped
+`resources.assets.orig-backup-<date>` next to `resources.assets` (the file as it
+was before that run; later backups may contain an already patched file). To
+restore the text table, close the game and replace `resources.assets` with the
+desired backup. The menu patch saves its original bytes to
+`GC-FR-patch-backup.json` in the game folder; `python install.py --restore`
+replays them. All tools refuse to run while `GunmanContracts.exe` is running
+(the check warns when it cannot run).
+
+## Tools
+
+| Tool | Purpose |
+| --- | --- |
+| `install.py` | One-command install: texts + menu entry. |
+| `tools/apply_text.py` | Write the main text table (FR column; DE only with `--overwrite-de`). |
+| `tools/add_out_of_table_lines.py` | Add subtitles whose clip names the table lacks (`--apply` / `--dry-run`). |
+| `tools/apply_scene_hints.py` | Translate the interaction hints baked into the scenes (`--apply` / `--dry-run`). |
+| `tools/find_missing_keys.py` | Find where a displayed string comes from: the table or a baked asset. |
+| `tools/fix_broken_rows.py` | Repair table rows split by a bare line feed. |
+| `tools/verify_game_text.py` | Read the installed table back and compare it with this repository. |
+| `tools/apply_french_patch.py` | The loaderless menu patch (apply / check / restore). |
+| `data/` | The translation itself: `fr_strings.json`, the out-of-table lines, the scene hints. |
+
+## Limits
+
+- Voice acting stays in English; only text and subtitles are translated.
+- A game update or Steam file verification reverts everything: re-run `python install.py`.
+- The menu patch targets game version 0.3.1.1; on another version it refuses to
+  touch unrecognised bytes and says so.
+- `tools/verify_game_text.py` compares only the keys of `data/fr_strings.json` that
+  the table already carries; the out-of-table lines and the scene hints have
+  their own reports.
 
 ---
 
 ## Français
 
-Traduction française des textes et sous-titres de Gunman Contracts — Stand Alone.
-Le doublage reste en anglais.
+Traduction française des textes et sous-titres de Gunman Contracts — Stand Alone,
+avec une entrée **Français** dans le menu des langues du jeu. Le doublage reste
+en anglais.
 
 Traduction non officielle, sans affiliation avec les créateurs du jeu. Les assets
 du jeu ne sont pas distribués ici et restent la propriété de leurs ayants droit.
 
-### Installer ou mettre à jour
+### Installer
 
-Sur le PC où le jeu est installé, fermer le jeu et lancer ces commandes depuis
-la racine du dépôt :
+Fermer le jeu, puis depuis la racine du dépôt :
 
 ```bash
 python -m pip install -r requirements.txt
-python apply_text.py --overwrite-de
-python add_out_of_table_lines.py --apply
-python apply_scene_hints.py --apply
+python install.py
 ```
 
-Trois étapes, dans cet ordre. `apply_text.py` écrit la table principale.
-`add_out_of_table_lines.py` ajoute ensuite les lignes dont le doublage a besoin
-mais que la table ne porte pas, sans quoi ces sous-titres n'existent pas.
-`apply_scene_hints.py` traduit enfin les libellés d'interaction que le jeu lit
-dans ses **scènes** et non dans la table. Ne lancer que la première étape laisse
-ces deux manques en place. Les deux dernières acceptent aussi `--dry-run`, qui
-signale sans écrire.
+`install.py` exécute, dans l'ordre : `tools/apply_text.py` (écrit la table
+principale), `tools/add_out_of_table_lines.py` (ajoute les sous-titres dont la
+table n'a pas de ligne), `tools/apply_scene_hints.py` (traduit les libellés
+d'interaction écrits dans les scènes), puis le patch du menu (ci-dessous) pour
+que **Français** soit sélectionnable dans le jeu.
 
-La version actuelle du jeu propose **English** et **Deutsch**, mais pas de
-français sélectionnable. La commande ci-dessus écrit le français dans les
-entrées FR et DE ; sélectionner **Options → Langue → Deutsch** dans le jeu pour
-afficher la traduction. Le texte allemand est remplacé.
+Options : `--dry-run` (signale sans écrire), `--no-menu` (textes seulement),
+`--overwrite-de` (repli ci-dessous), `--restore` (annule le patch du menu), et un
+chemin personnalisé : `python install.py "D:/Games/Gunman Contracts - Stand Alone"`
+(le dossier du jeu, ou son sous-dossier `GunmanContracts_Data`). Le chemin Steam
+est utilisé par défaut.
 
-Par défaut, le script cherche `resources.assets` dans :
+### Le menu des langues
 
-`C:/Program Files (x86)/Steam/steamapps/common/Gunman Contracts - Stand Alone/GunmanContracts_Data`
+Le jeu de base ne propose que **English** et **Deutsch**. L'installation ajoute
+**Français** comme troisième entrée via le patch sans mod loader
+(`tools/apply_french_patch.py`) : trois modifications d'octets dans les fichiers du jeu,
+aucun mod loader, rien qui tourne à côté — la détection de mods du jeu reste
+muette et les highscores Steam continuent de fonctionner. Application ou
+annulation seules : `tools/install_patch.bat` / `tools/restore_patch.bat`.
 
-Pour une autre installation, passer le chemin du dossier **GunmanContracts_Data**
-(et non celui du fichier `resources.assets`) :
+**Repli, sans toucher aux binaires du jeu** : `python install.py --overwrite-de`
+écrit aussi le français dans l'entrée Deutsch ; sélectionner **Options →
+Language → Deutsch** pour afficher la traduction. Le texte allemand est alors
+remplacé.
 
-```bash
-python apply_text.py --overwrite-de "C:\chemin\vers\GunmanContracts_Data"
-python add_out_of_table_lines.py --apply "C:\chemin\vers\GunmanContracts_Data"
-python apply_scene_hints.py --apply "C:\chemin\vers\GunmanContracts_Data"
-```
+Si vous avez utilisé une version antérieure de ces scripts (français affiché via
+Deutsch) : lancer « vérifier l'intégrité des fichiers » dans Steam pour restaurer
+les fichiers d'origine, relancer `python install.py` — Français devient
+sélectionnable et le texte allemand revient.
 
-Pour mettre à jour un jeu déjà patché, relancer la même commande. Le script lit
-`fr_strings.json` et remplace les valeurs FR existantes. DE n'est modifié
-**qu'avec** `--overwrite-de` ; conserver cette option si le jeu affiche le
-français via Deutsch. Sans elle, l'ancien texte français dans DE n'est pas
-actualisé. Une mise à jour du jeu ou une vérification des fichiers Steam peut
-rétablir l'asset d'origine ; relancer alors la commande.
+### Mettre à jour
 
-Avant d'écrire, le script crée une sauvegarde horodatée
-`resources.assets.orig-backup-<date>` à côté de `resources.assets`. Chaque
-sauvegarde contient le fichier **tel qu'il était avant cette exécution** ; les
-sauvegardes ultérieures peuvent donc contenir un fichier déjà patché. Pour
-restaurer, fermer le jeu et remplacer `resources.assets` par la sauvegarde de
-l'exécution souhaitée. Le script contrôle la taille de l'asset et refuse une
-sortie anormalement petite. Sous Windows, il refuse aussi d'agir si
-`GunmanContracts.exe` est détecté ; si ce contrôle est impossible, il demande
-de vérifier manuellement que le jeu est fermé.
+Relancer `python install.py` après une mise à jour du jeu ou une vérification des
+fichiers Steam (les deux restaurent les fichiers d'origine). Le texte de la
+traduction vit dans `data/fr_strings.json` ; `--overwrite-de` ne sert qu'au
+repli.
+
+### Sauvegarde et restauration
+
+Avant d'écrire, `tools/apply_text.py` crée une sauvegarde horodatée
+`resources.assets.orig-backup-<date>` à côté de `resources.assets` (le fichier
+tel qu'il était avant cette exécution ; les sauvegardes ultérieures peuvent
+contenir un fichier déjà patché). Pour restaurer la table, fermer le jeu et
+remplacer `resources.assets` par la sauvegarde voulue. Le patch du menu sauvegarde
+ses octets d'origine dans `GC-FR-patch-backup.json` (dossier du jeu) ;
+`python install.py --restore` les restaure. Tous les outils refusent de tourner
+si `GunmanContracts.exe` est en cours d'exécution (le contrôle prévient quand il
+ne peut pas s'exécuter).
+
+### Outils
+
+Voir le tableau de la section anglaise : `install.py` orchestre tout ; tous les
+scripts (pipeline et patch du menu) vivent dans `tools/` ; les données de
+traduction dans `data/`.
+
+### Limites
+
+- Le doublage reste en anglais ; seuls les textes et sous-titres sont traduits.
+- Une mise à jour du jeu ou une vérification Steam rétablit tout : relancer
+  `python install.py`.
+- Le patch du menu cible la version 0.3.1.1 du jeu ; sur une autre version, il
+  refuse de toucher aux octets non reconnus et le signale.
+- `tools/verify_game_text.py` ne compare que les clés de `data/fr_strings.json` que la
+  table porte déjà ; les lignes hors table et les libellés de scènes ont leurs
+  propres rapports.

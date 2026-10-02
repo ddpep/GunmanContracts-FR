@@ -1,24 +1,19 @@
 #!/usr/bin/env python3
 """Translate the interaction hints that the game reads from its SCENES, not from the table.
 
-    python apply_scene_hints.py --dry-run
-    python apply_scene_hints.py --apply
+    python tools/apply_scene_hints.py --dry-run
+    python tools/apply_scene_hints.py --apply
 
-Why this tool exists: some on-screen labels exist twice in the install - once in the `languages`
-table (which `apply_text.py` translates) and once baked into a scene asset as the default text of a
-TextMeshPro component. The game replaces the second one from the table when its lookup covers the
-element, and leaves the baked English on screen when it does not. Measured case: standing in front
-of a basement door, the objective came from the table (French) while the interaction hint stayed
-English - a block that is half French, half English.
+Some on-screen labels exist twice: in the `languages` table (translated by
+`apply_text.py`) and baked into a scene asset as a TextMeshPro default text. The
+game only replaces the baked one when its table lookup covers the element, so
+those hints stay English without this pass.
 
-The repair is a raw byte replacement, and every replacement is **the same length** as the English it
-replaces (the French is padded with trailing spaces, which no text field renders). Nothing else moves:
-the string's length prefix stays valid, the object keeps its byte length, and the file's object table
-is untouched. No re-serialization at all.
+The repair is a raw byte replacement: each French label is the same byte length as
+the English it replaces (padded with trailing spaces, which no text field renders),
+so nothing else in the file moves and there is no re-serialization.
 
-`scene_hints.json` carries the pairs. It is a small, explicit list on purpose: only the hints whose
-English was measured inside a scene asset belong here, and a hint whose French would need more room
-than the English is left alone rather than resized.
+`data/scene_hints.json` carries the pairs, and only measured hints belong there.
 """
 import argparse
 import datetime
@@ -30,7 +25,7 @@ import sys
 
 DATA = r"C:/Program Files (x86)/Steam/steamapps/common/Gunman Contracts - Stand Alone/GunmanContracts_Data"
 HERE = os.path.dirname(os.path.abspath(__file__))
-PLAN = os.path.join(HERE, "scene_hints.json")
+PLAN = os.path.join(HERE, "..", "data", "scene_hints.json")
 SCENES = ["sharedassets1.assets", "sharedassets2.assets", "sharedassets3.assets",
           "sharedassets4.assets", "globalgamemanagers"]
 
@@ -46,12 +41,10 @@ def game_running():
 
 
 def replace_in_bytes(raw, pairs):
-    """Replace each English label with its French twin, in the raw file bytes.
+    """Replace each English label with its French twin in the raw file bytes.
 
-    Both sides are written as a 4-byte little-endian length followed by the UTF-8 text, and the
-    French is the same byte length as the English it replaces, so nothing else in the file moves:
-    the length prefix stays valid and the object keeps its byte length. That is why the caller
-    refuses any pair whose lengths differ, and why there is no re-serialization anywhere here.
+    Both sides are a 4-byte little-endian length followed by UTF-8 text; equal byte
+    lengths are enforced by the caller, so nothing else in the file moves.
     """
     replacements = []
     for key, pair in pairs.items():

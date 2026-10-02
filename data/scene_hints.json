@@ -1,6 +1,6 @@
 {
  "_note": "Aides d'interaction dont l'anglais est mesure DANS un asset de scene (composant de texte d'interface), donc affiche tel quel quand le jeu ne resout pas l'element. Le francais fait exactement la meme longueur que l'anglais, complete par des espaces non affiches : le remplacement ne change ni la taille de l'objet ni la table du fichier.",
- "_mesure": "libelles retrouves en clair dans sharedassets1/2/4 : climb ledge (2 objets), operate device (2), open/close door (2), grab gun (2), place gun (4), swap gun (2). Les aides du menu (Select, Navigate, Switch Tabs) sont des gabarits remplaces par le jeu et ne sont pas touchees. Les aides ammogun, cancel, cantswap, wrongslot, menucontracts, menuselect, menumode, menuplaymodes, menutabs sont absentes des scenes : le jeu lit la table, rien a faire.",
+ "_mesure": "Mesure : 6 libelles en clair dans sharedassets1/2/4 (2 a 4 occurrences chacun). Les aides de menu (Select, Navigate, Switch Tabs) sont des gabarits remplaces par le jeu ; les autres aides (ammogun, cancel, cantswap...) sont absentes des scenes - le jeu lit la table, rien a faire.",
  "hint_climb": {
   "en": "climb ledge",
   "fr": "escalader  ",

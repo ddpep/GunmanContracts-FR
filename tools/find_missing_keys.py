@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Find where a displayed string comes from: the text table, or baked into an asset.
 
-    python find_missing_keys.py "CONTRACTS" "AMBIENT OCCLUSION"
+    python tools/find_missing_keys.py "CONTRACTS" "AMBIENT OCCLUSION"
 
 Read-only. For each searched string it answers, in order:
 
@@ -10,9 +10,8 @@ Read-only. For each searched string it answers, in order:
 2. if the table does not carry it, is the literal still present in the game's binaries
    (a hardcoded label in a scene, a prefab or a TextMeshPro object), and in which file.
 
-The distinction decides the work: a key present in the table but untranslated is a line to
-add to `fr_strings.json` and one `apply_text.py` run; a string found in a binary is baked into
-an asset and no table edit will ever move it.
+A key present in the table but untranslated is a line to add to `data/fr_strings.json`;
+a string found in a binary is baked into an asset and no table edit will move it.
 """
 import argparse
 import json
@@ -21,7 +20,7 @@ import sys
 
 DATA = r"C:/Program Files (x86)/Steam/steamapps/common/Gunman Contracts - Stand Alone/GunmanContracts_Data"
 HERE = os.path.dirname(os.path.abspath(__file__))
-STRINGS = os.path.join(HERE, "fr_strings.json")
+STRINGS = os.path.join(HERE, "..", "data", "fr_strings.json")
 
 # Assets worth scanning for a baked literal. The .resS payloads hold audio, not text.
 SUFFIXES = (".assets", ".resource", ".dat", ".unity3d", ".bytes", ".json")
@@ -45,11 +44,8 @@ def table(data_dir=None):
 def scan_binaries(needles, case_sensitive=False, data_dir=None):
     """Byte-level search: a literal baked in an asset is stored as plain ASCII (or UTF-16).
 
-    Case-insensitive by default, which is what you want when hunting a WORD ("is ambient
-    occlusion written anywhere?") but not when hunting a DISPLAYED LABEL: an all-caps
-    on-screen "CONTRACTS" is not proved by the table's "Contracts". Pass case_sensitive=True for
-    that question - it is the difference between a label stored in English and a label drawn
-    from the language slot with an all-caps font.
+    Case-insensitive by default; pass case_sensitive=True when hunting a DISPLAYED
+    LABEL (an all-caps on-screen "CONTRACTS" is not proved by the table's "Contracts").
     """
     found = {}
     files = []

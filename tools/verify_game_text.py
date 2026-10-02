@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """Read the game's own text table back and compare it with this repository.
 
-    python verify_game_text.py
+    python tools/verify_game_text.py
 
 Read-only: nothing is written. It answers one question - what the installed game
-displays today, against what `fr_strings.json` says should be displayed.
+displays today, against what `data/fr_strings.json` says should be displayed.
 
-The French slot is FR_SLOT (3); on a game build without a selectable French language
+The French slot is FR_SLOT (3); on a game version without a selectable French language
 the install also writes the German slot (2), so both are reported.
 """
 import argparse
@@ -16,7 +16,7 @@ import sys
 
 DATA = r"C:/Program Files (x86)/Steam/steamapps/common/Gunman Contracts - Stand Alone/GunmanContracts_Data"
 HERE = os.path.dirname(os.path.abspath(__file__))
-STRINGS = os.path.join(HERE, "fr_strings.json")
+STRINGS = os.path.join(HERE, "..", "data", "fr_strings.json")
 DE_SLOT = 2
 FR_SLOT = 3
 
@@ -33,9 +33,9 @@ def repo_state():
             return ""
 
     head = git("rev-parse", "--short", "HEAD")
-    dirty = git("status", "--porcelain", "fr_strings.json")
+    dirty = git("status", "--porcelain", os.path.join("..", "data", "fr_strings.json"))
     behind = git("rev-list", "--count", "HEAD..@{u}")
-    line = f"  fr_strings.json: revision {head or 'not in a repository'}"
+    line = f"  data/fr_strings.json: revision {head or 'not in a repository'}"
     if dirty:
         line += " + UNCOMMITTED CHANGES"
     if behind not in ("", "0"):
@@ -97,7 +97,7 @@ def main():
 
     print(f"  repo lines present in the game table: {total}")
     print()
-    print("  scope: this compares only the keys of fr_strings.json that the table already carries.")
+    print("  scope: this compares only the keys of data/fr_strings.json that the table already carries.")
     print("  it does NOT verify the out-of-table lines (add_out_of_table_lines.py) nor the scene")
     print("  hints (apply_scene_hints.py). A clean result here is not proof of a complete install.")
     print(f"  FR slot (3) identical to the repo: {fr_ok} | different: {fr_ko}")
