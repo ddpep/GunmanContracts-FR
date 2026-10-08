@@ -91,6 +91,10 @@ def main():
         print("\n  --dry-run: nothing was written.")
         return
 
+    if not to_add and not updated:
+        print("\n  nothing to write: the table already carries every line.")
+        return
+
     save_table(path, env, asset, new_lines)
     print(f"  lines added: {len(to_add)} | lines updated: {len(updated)}"
           f"   (table total: {len(new_lines) - 1})")

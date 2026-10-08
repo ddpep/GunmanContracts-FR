@@ -87,6 +87,27 @@ def load_table(data_dir):
     return path, env, asset
 
 
+def release(env):
+    """Close the containers UnityPy keeps open.
+
+    Windows refuses `os.replace` over a file this process still has open, and an
+    Environment holds its container open for its whole life. A save that keeps the
+    Environment alive therefore fails with WinError 32 on the swap - after having
+    written the whole file, so the install looks half done.
+    """
+    import gc
+
+    containers = list(getattr(env, "files", {}).values())
+    single = getattr(env, "file", None)
+    if single is not None:
+        containers.append(single)
+    for container in containers:
+        reader = getattr(container, "reader", None)
+        if reader is not None:
+            reader.dispose()
+    gc.collect()
+
+
 def save_table(path, env, asset, lines):
     """Back up, write the table, read it back before replacing the game file."""
     import UnityPy
@@ -97,9 +118,13 @@ def save_table(path, env, asset, lines):
     blob = env.file.save()
 
     def same_table(tmp):
-        written = find_languages(UnityPy.load(tmp))
-        return None if written is not None and written.m_Script == text else \
+        check = UnityPy.load(tmp)
+        written = find_languages(check)
+        ok = written is not None and written.m_Script == text
+        release(check)          # the verification opened the tmp: close it before the swap
+        return None if ok else \
             "the written table does not read back identical"
 
     backup(path)
+    release(env)                # the swap cannot replace a file this process still has open
     write_replacing(path, blob, same_table)
