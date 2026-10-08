@@ -16,28 +16,16 @@ so nothing else in the file moves and there is no re-serialization.
 `data/scene_hints.json` carries the pairs, and only measured hints belong there.
 """
 import argparse
-import datetime
 import json
 import os
-import shutil
-import subprocess
 import sys
 
-DATA = r"C:/Program Files (x86)/Steam/steamapps/common/Gunman Contracts - Stand Alone/GunmanContracts_Data"
+from common import DATA, backup, refuse_if_running, write_replacing
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 PLAN = os.path.join(HERE, "..", "data", "scene_hints.json")
 SCENES = ["sharedassets1.assets", "sharedassets2.assets", "sharedassets3.assets",
           "sharedassets4.assets", "globalgamemanagers"]
-
-
-def game_running():
-    """Raw bytes, never text=True: tasklist emits OEM on non-English systems."""
-    try:
-        out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq GunmanContracts.exe"],
-                             capture_output=True, timeout=20).stdout or b""
-    except Exception:
-        return None
-    return b"GunmanContracts" in out
 
 
 def replace_in_bytes(raw, pairs):
@@ -74,11 +62,7 @@ def main():
                      f"({len(pair['fr'].encode('utf-8'))} bytes vs {len(pair['en'].encode('utf-8'))})")
 
     if args.apply:
-        state = game_running()
-        if state is None:
-            print("WARNING: cannot check whether the game is running.")
-        elif state:
-            sys.exit("REFUSING: the game is running. Close it first.")
+        refuse_if_running()
 
     total = 0
     for name in SCENES:
@@ -95,11 +79,8 @@ def main():
             print(f"    {key:14s} {n} occurrence(s): {pairs[key]['en']!r} -> {pairs[key]['fr']!r}")
         if args.dry_run:
             continue
-        backup = path + ".orig-backup-" + datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        shutil.copy2(path, backup)
-        with open(path, "wb") as fh:
-            fh.write(raw)
-        print(f"    backup: {backup}")
+        backup(path)
+        write_replacing(path, raw)
 
     print()
     if args.dry_run:

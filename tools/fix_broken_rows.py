@@ -9,13 +9,9 @@ The repaired table is saved by reserializing the asset with UnityPy. This is
 not a raw byte patch and does not guarantee unchanged file size or offsets.
 """
 import argparse
-import datetime
-import os
 import re
-import shutil
-import sys
 
-DATA = r"C:/Program Files (x86)/Steam/steamapps/common/Gunman Contracts - Stand Alone/GunmanContracts_Data"
+from common import DATA, EOL, load_table, refuse_if_running, save_table
 
 KEY = re.compile(r"^[A-Za-z0-9_\-]{2,}$")
 
@@ -27,30 +23,9 @@ def parse_args(argv=None):
     return parser.parse_args(argv)
 
 
-def find_languages(env):
-    for obj in env.objects:
-        if obj.type.name != "TextAsset":
-            continue
-        data = obj.read()
-        if getattr(data, "m_Name", "") == "languages":
-            return data
-    return None
-
-
-def game_running():
-    """Return whether the game is running, or None if it cannot be checked."""
-    import subprocess
-    try:
-        out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq GunmanContracts.exe"],
-                             capture_output=True, timeout=20).stdout or b""
-    except Exception:
-        return None
-    return b"GunmanContracts" in out
-
-
 def broken_rows(script):
     """Yield (index, row) for every table row holding a bare line feed."""
-    for i, row in enumerate(script.split("\r\n")):
+    for i, row in enumerate(script.split(EOL)):
         if "\n" not in row:
             continue
         if row.count("|") < 3:
@@ -63,16 +38,7 @@ def broken_rows(script):
 
 def main():
     args = parse_args()
-    import UnityPy
-
-    target = os.path.join(args.data, "resources.assets")
-    if not os.path.exists(target):
-        sys.exit("game not found at " + target)
-
-    env = UnityPy.load(target)
-    asset = find_languages(env)
-    if asset is None:
-        sys.exit("TextAsset 'languages' not found - unexpected game build")
+    path, env, asset = load_table(args.data)
 
     script = asset.m_Script
     found = list(broken_rows(script))
@@ -89,17 +55,9 @@ def main():
         print("dry run - no write.")
         return
 
-    state = game_running()
-    if state is None:
-        print("WARNING: could not check whether the game is running - verify by hand.")
-    elif state:
-        sys.exit("REFUSING to write: the game is running. Close it first.")
+    refuse_if_running()
 
-    backup = target + ".orig-backup-" + datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    shutil.copy2(target, backup)
-    print("backup:", backup)
-
-    rows = script.split("\r\n")
+    rows = script.split(EOL)
     repaired = 0
     for i, row in found:
         before = len(row.split("|"))
@@ -107,17 +65,11 @@ def main():
         assert len(fixed.split("|")) == before, "field count changed - aborting"
         rows[i] = fixed
         repaired += 1
-    script = "\r\n".join(rows)
+    script = EOL.join(rows)
 
     assert not list(broken_rows(script)), "rows still split - aborting"
 
-    asset.m_Script = script
-    asset.save()
-    blob = env.file.save()
-    if len(blob) < 500_000_000:
-        sys.exit("REFUSING to write: suspicious output size %d" % len(blob))
-    with open(target, "wb") as fh:
-        fh.write(blob)
+    save_table(path, env, asset, rows)
     print("rows repaired:", repaired)
 
 

@@ -1,33 +1,25 @@
 #!/usr/bin/env python3
-"""Apply the French translations to the installed game."""
+"""Apply the French translations to the installed game.
+
+    python tools/apply_text.py --dry-run
+    python tools/apply_text.py --apply [--overwrite-de]
+"""
 import argparse
-import datetime
 import json
 import os
-import shutil
 import sys
 
-DATA = r"C:/Program Files (x86)/Steam/steamapps/common/Gunman Contracts - Stand Alone/GunmanContracts_Data"
+from common import DATA, DE_SLOT, EOL, FR_SLOT, load_table, refuse_if_running, save_table
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 STRINGS = os.path.join(HERE, "..", "data", "fr_strings.json")
-
-DE_SLOT = 2
-FR_SLOT = 3
-
-
-def find_languages(env):
-    for obj in env.objects:
-        if obj.type.name != "TextAsset":
-            continue
-        data = obj.read()
-        if getattr(data, "m_Name", "") == "languages":
-            return data
-    return None
 
 
 def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("data", nargs="?", default=DATA, help="path to GunmanContracts_Data")
+    parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--overwrite-de", action="store_true",
                         help="also write French into Deutsch for games without a French language option")
     return parser.parse_args(argv)
@@ -56,64 +48,33 @@ def translate_lines(lines, french, overwrite_german=False):
             line, was_changed = translate_line(line, french, overwrite_german)
             changed += was_changed
         out.append(line)
-    return out, changed, overwrite_german
-
-
-def game_running():
-    """Return whether the game is running, or None if it cannot be checked."""
-    import subprocess
-    try:
-        # tasklist writes OEM bytes on a non-English Windows: decode nothing.
-        out = subprocess.run(["tasklist", "/FI", "IMAGENAME eq GunmanContracts.exe"],
-                             capture_output=True, timeout=20).stdout or b""
-    except Exception:
-        return None
-    return b"GunmanContracts" in out
+    return out, changed
 
 
 def main():
     args = parse_args()
-    import UnityPy
-
-    target = os.path.join(args.data, "resources.assets")
-    if not os.path.exists(target):
-        sys.exit("game not found at " + target)
-    state = game_running()
-    if state is None:
-        print("WARNING: could not check whether the game is running - verify by hand.")
-    elif state:
-        sys.exit("REFUSING to install: the game is running. Close it first.")
+    if not args.apply and not args.dry_run:
+        sys.exit("choose --dry-run or --apply")
+    if args.apply:
+        refuse_if_running()
     french = json.load(open(STRINGS, encoding="utf-8"))
+    path, env, asset = load_table(args.data)
 
-    backup = target + ".orig-backup-" + datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    shutil.copy2(target, backup)
-    print("backup:", backup)
-    if os.path.getsize(target) < 500_000_000:
-        sys.exit("unexpected resources.assets size - wrong file?")
-
-    env = UnityPy.load(target)
-    asset = find_languages(env)
-    if asset is None:
-        sys.exit("TextAsset 'languages' not found - unexpected game build")
-
-    lines = asset.m_Script.split("\r\n")
-    out, changed, overwrite_german = translate_lines(lines, french, args.overwrite_de)
-
+    lines = asset.m_Script.split(EOL)
+    out, changed = translate_lines(lines, french, args.overwrite_de)
     for a, b in zip(lines, out):
         if a != b:
             assert len(a.split("|")) == len(b.split("|")), "field count changed - aborting"
 
-    asset.m_Script = "\r\n".join(out)
-    asset.save()
-    blob = env.file.save()
-    if len(blob) < 500_000_000:
-        sys.exit("REFUSING to write: suspicious output size %d" % len(blob))
-    with open(target, "wb") as fh:
-        fh.write(blob)
-
+    print("entries to update:", changed)
+    print("Deutsch overwrite:", "enabled" if args.overwrite_de else "disabled")
+    if args.dry_run:
+        print("--dry-run: nothing was written.")
+        return
+    if changed:
+        save_table(path, env, asset, out)
     print("entries updated:", changed)
-    print("Deutsch overwrite:", "enabled" if overwrite_german else "disabled")
-    if overwrite_german:
+    if args.overwrite_de:
         print("done. In game: Options > Language > Deutsch.")
     else:
         print("done. Select French in game if available; Deutsch was left unchanged.")

@@ -6,19 +6,19 @@
 Read-only: nothing is written. It answers one question - what the installed game
 displays today, against what `data/fr_strings.json` says should be displayed.
 
-The French slot is FR_SLOT (3); on a game version without a selectable French language
-the install also writes the German slot (2), so both are reported.
+The French slot is FR_SLOT (3). The German slot (2) is compared only with
+--overwrite-de, the fallback install that writes French over Deutsch: otherwise it
+holds German and every line would be reported as different.
 """
 import argparse
 import json
 import os
 import sys
 
-DATA = r"C:/Program Files (x86)/Steam/steamapps/common/Gunman Contracts - Stand Alone/GunmanContracts_Data"
+from common import DATA, DE_SLOT, EOL, FR_SLOT, load_table
+
 HERE = os.path.dirname(os.path.abspath(__file__))
 STRINGS = os.path.join(HERE, "..", "data", "fr_strings.json")
-DE_SLOT = 2
-FR_SLOT = 3
 
 
 def repo_state():
@@ -46,29 +46,15 @@ def repo_state():
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("data", nargs="?", default=DATA)
+    ap.add_argument("--overwrite-de", action="store_true",
+                    help="the install used the Deutsch fallback: compare the DE slot too")
     args = ap.parse_args()
-    import UnityPy
 
     repo_state()
-
-    target = os.path.join(args.data, "resources.assets")
-    if not os.path.exists(target):
-        sys.exit("game not found at " + target)
     french = json.load(open(STRINGS, encoding="utf-8"))
+    _, _, asset = load_table(args.data)
 
-    env = UnityPy.load(target)
-    asset = None
-    for obj in env.objects:
-        if obj.type.name != "TextAsset":
-            continue
-        d = obj.read()
-        if getattr(d, "m_Name", "") == "languages":
-            asset = d
-            break
-    if asset is None:
-        sys.exit("TextAsset 'languages' not found - unexpected game build")
-
-    lines = asset.m_Script.split("\r\n")
+    lines = asset.m_Script.split(EOL)
     total = fr_ok = fr_ko = de_ok = de_ko = missing = 0
     differences = []
     for i, line in enumerate(lines):
@@ -88,6 +74,8 @@ def main():
             fr_ko += 1
             if len(differences) < 8:
                 differences.append(("FR", key, fields[FR_SLOT], expected))
+        if not args.overwrite_de:
+            continue
         if fields[DE_SLOT] == expected:
             de_ok += 1
         else:
@@ -101,14 +89,16 @@ def main():
     print("  it does NOT verify the out-of-table lines (add_out_of_table_lines.py) nor the scene")
     print("  hints (apply_scene_hints.py). A clean result here is not proof of a complete install.")
     print(f"  FR slot (3) identical to the repo: {fr_ok} | different: {fr_ko}")
-    print(f"  DE slot (2) identical to the repo: {de_ok} | different: {de_ko}")
+    if args.overwrite_de:
+        print(f"  DE slot (2) identical to the repo: {de_ok} | different: {de_ko}")
     if not total:
         print("  WARNING: no comparable line - the text is probably not installed.")
     for slot, key, found, expected in differences:
         print(f"    [{slot}] {key[:34]:34s}")
         print(f"         game   : {found[:88]}")
         print(f"         repo   : {expected[:88]}")
+    return 1 if (not total or fr_ko or de_ko) else 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

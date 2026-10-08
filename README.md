@@ -23,7 +23,7 @@ python install.py
 scenes), then the menu patch (below) so **Français** is selectable in the game.
 
 Options: `--dry-run` (report only), `--no-menu` (texts only), `--overwrite-de`
-(the fallback below), `--restore` (undo the menu patch), and a custom install
+(the fallback below), `--restore` (undo the menu patch and restore the `.orig` files), and a custom install
 path: `python install.py "D:/Games/Gunman Contracts - Stand Alone"` (the game
 folder, or its `GunmanContracts_Data` subfolder). The Steam library path is the
 default.
@@ -54,27 +54,29 @@ Run `python install.py` again after a game update or a Steam file verification
 
 ## Backup and restore
 
-Before writing, `tools/apply_text.py` creates a timestamped
-`resources.assets.orig-backup-<date>` next to `resources.assets` (the file as it
-was before that run; later backups may contain an already patched file). To
-restore the text table, close the game and replace `resources.assets` with the
-desired backup. The menu patch saves its original bytes to
-`GC-FR-patch-backup.json` in the game folder; `python install.py --restore`
-replays them. All tools refuse to run while `GunmanContracts.exe` is running
-(the check warns when it cannot run).
+The first time a tool rewrites a game file it keeps the untouched copy as
+`<file>.orig` (for example `resources.assets.orig`); every run also leaves a
+timestamped `<file>.orig-backup-<date>` (the file as it was before that run).
+Each file is written next to the original and read back before it replaces it.
+The menu patch saves its original bytes to `GC-FR-patch-backup.json` in the game
+folder. `python install.py --restore` undoes the menu patch and puts every
+`.orig` back. After a game update, delete the `.orig` files before reinstalling:
+they belong to the previous version. All tools refuse to run while
+`GunmanContracts.exe` is running (the check warns when it cannot run).
 
 ## Tools
 
 | Tool | Purpose |
 | --- | --- |
 | `install.py` | One-command install: texts + menu entry. |
-| `tools/apply_text.py` | Write the main text table (FR column; DE only with `--overwrite-de`). |
+| `tools/apply_text.py` | Write the main text table (FR column; DE only with `--overwrite-de`; `--apply` / `--dry-run`). |
 | `tools/add_out_of_table_lines.py` | Add subtitles whose clip names the table lacks (`--apply` / `--dry-run`). |
 | `tools/apply_scene_hints.py` | Translate the interaction hints baked into the scenes (`--apply` / `--dry-run`). |
 | `tools/find_missing_keys.py` | Find where a displayed string comes from: the table or a baked asset. |
 | `tools/fix_broken_rows.py` | Repair table rows split by a bare line feed. |
-| `tools/verify_game_text.py` | Read the installed table back and compare it with this repository. |
+| `tools/verify_game_text.py` | Read the installed table back and compare it with this repository (DE too with `--overwrite-de`). |
 | `tools/apply_french_patch.py` | The loaderless menu patch (apply / check / restore). |
+| `tools/common.py` | Shared helpers: game location, running guard, backups, verified writes. |
 | `data/` | The translation itself: `fr_strings.json`, the out-of-table lines, the scene hints. |
 
 ## Limits
@@ -114,7 +116,7 @@ d'interaction écrits dans les scènes), puis le patch du menu (ci-dessous) pour
 que **Français** soit sélectionnable dans le jeu.
 
 Options : `--dry-run` (signale sans écrire), `--no-menu` (textes seulement),
-`--overwrite-de` (repli ci-dessous), `--restore` (annule le patch du menu), et un
+`--overwrite-de` (repli ci-dessous), `--restore` (annule le patch du menu et remet les `.orig`), et un
 chemin personnalisé : `python install.py "D:/Games/Gunman Contracts - Stand Alone"`
 (le dossier du jeu, ou son sous-dossier `GunmanContracts_Data`). Le chemin Steam
 est utilisé par défaut.
@@ -147,13 +149,14 @@ repli.
 
 ### Sauvegarde et restauration
 
-Avant d'écrire, `tools/apply_text.py` crée une sauvegarde horodatée
-`resources.assets.orig-backup-<date>` à côté de `resources.assets` (le fichier
-tel qu'il était avant cette exécution ; les sauvegardes ultérieures peuvent
-contenir un fichier déjà patché). Pour restaurer la table, fermer le jeu et
-remplacer `resources.assets` par la sauvegarde voulue. Le patch du menu sauvegarde
-ses octets d'origine dans `GC-FR-patch-backup.json` (dossier du jeu) ;
-`python install.py --restore` les restaure. Tous les outils refusent de tourner
+La première fois qu'un outil réécrit un fichier du jeu, il en garde la copie
+intacte sous `<fichier>.orig` (par exemple `resources.assets.orig`) ; chaque
+exécution laisse aussi une sauvegarde horodatée `<fichier>.orig-backup-<date>`.
+Chaque fichier est écrit à côté de l'original et relu avant de le remplacer. Le
+patch du menu sauvegarde ses octets d'origine dans `GC-FR-patch-backup.json`
+(dossier du jeu). `python install.py --restore` annule le patch du menu et remet
+tous les `.orig` en place. Après une mise à jour du jeu, supprimer les `.orig`
+avant de réinstaller : ils appartiennent à la version précédente. Tous les outils refusent de tourner
 si `GunmanContracts.exe` est en cours d'exécution (le contrôle prévient quand il
 ne peut pas s'exécuter).
 

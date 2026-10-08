@@ -29,6 +29,8 @@ import json
 import os
 import sys
 
+from common import refuse_if_running
+
 DEFAULT_GAME = r"C:/Program Files (x86)/Steam/steamapps/common/Gunman Contracts - Stand Alone"
 
 BACKUP_NAME = "GC-FR-patch-backup.json"
@@ -216,6 +218,8 @@ def main(argv=None):
     args = ap.parse_args(argv)
 
     game = args.game.replace("\\", "/")
+    if not args.check:
+        refuse_if_running()
     if args.restore:
         return restore(game)
     if args.check:

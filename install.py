@@ -5,7 +5,7 @@
     python install.py --dry-run        # report what would be written, write nothing
     python install.py --no-menu        # texts only
     python install.py --overwrite-de   # fallback: French over Deutsch, no menu patch
-    python install.py --restore        # undo the menu patch
+    python install.py --restore        # undo the menu patch and restore the original game files
     python install.py "D:/Games/.../GunmanContracts_Data"   # custom install (or the game folder)
 
 Steps, in order: tools/apply_text.py, tools/add_out_of_table_lines.py --apply,
@@ -14,12 +14,16 @@ Close the game first. Details and manual commands: README.md.
 """
 import argparse
 import os
+import shutil
 import subprocess
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOOLS = os.path.join(HERE, "tools")
 PATCH = os.path.join(TOOLS, "apply_french_patch.py")
+# Files the text steps rewrite; each keeps its untouched copy as `<file>.orig`.
+TEXT_FILES = ("resources.assets", "sharedassets1.assets", "sharedassets2.assets",
+              "sharedassets3.assets", "sharedassets4.assets", "globalgamemanagers")
 
 DEFAULT_DATA = "C:/Program Files (x86)/Steam/steamapps/common/Gunman Contracts - Stand Alone/GunmanContracts_Data"
 
@@ -37,7 +41,8 @@ def main():
     ap.add_argument("--no-menu", action="store_true", help="texts only, skip the menu patch")
     ap.add_argument("--overwrite-de", action="store_true",
                     help="fallback: write French over Deutsch too (no menu patch)")
-    ap.add_argument("--restore", action="store_true", help="undo the menu patch and exit")
+    ap.add_argument("--restore", action="store_true",
+                    help="undo the menu patch, put back the .orig copies, and exit")
     args = ap.parse_args()
 
     data = args.data.replace("\\", "/").rstrip("/")
@@ -46,19 +51,27 @@ def main():
     game = os.path.dirname(data)
 
     if args.restore:
-        return run(PATCH, ["--restore", game])
+        code = run(PATCH, ["--restore", game])
+        if code != 0:
+            return code
+        restored = 0
+        for name in TEXT_FILES:
+            orig = os.path.join(data, name + ".orig")
+            if os.path.exists(orig):
+                shutil.copy2(orig, os.path.join(data, name))
+                print(f"  [OK] {name} : restored from {name}.orig")
+                restored += 1
+        if not restored:
+            print("  no .orig copy found (installed by an older version): use Steam's"
+                  " 'verify integrity of game files' to restore the texts.")
+        return 0
 
-    steps = []
-    if args.dry_run:
-        print("note: apply_text.py has no --dry-run, skipped; the other steps only report.", flush=True)
-    else:
-        steps.append((os.path.join(TOOLS, "apply_text.py"),
-                      (["--overwrite-de"] if args.overwrite_de else []) + [data]))
-    steps += [
-        (os.path.join(TOOLS, "add_out_of_table_lines.py"),
-         (["--dry-run"] if args.dry_run else ["--apply"]) + [data]),
-        (os.path.join(TOOLS, "apply_scene_hints.py"),
-         (["--dry-run"] if args.dry_run else ["--apply"]) + [data]),
+    mode = ["--dry-run"] if args.dry_run else ["--apply"]
+    de = ["--overwrite-de"] if args.overwrite_de else []
+    steps = [
+        (os.path.join(TOOLS, "apply_text.py"), mode + de + [data]),
+        (os.path.join(TOOLS, "add_out_of_table_lines.py"), mode + de + [data]),
+        (os.path.join(TOOLS, "apply_scene_hints.py"), mode + [data]),
     ]
 
     for script, sargs in steps:
